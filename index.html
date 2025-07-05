@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>পার্সোনালাইজড হেলথ ড্যাশবোর্ড</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src='//libtl.com/sdk.js' data-zone='9530643' data-sdk='show_9530643'></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --tg-theme-bg-color: #0f0c29;
+            --tg-theme-text-color: #ffffff;
+            --tg-theme-hint-color: #9ca3af;
+            --tg-theme-button-color: #3b82f6;
+            --tg-theme-button-text-color: #ffffff;
+            --tg-theme-secondary-bg-color: rgba(26, 26, 46, 0.6);
+            --tg-theme-input-bg-color: rgba(71, 85, 105, 0.4);
+        }
+        @keyframes gradient-animation { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+        body { font-family: 'Hind Siliguri', sans-serif; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); transition: background-color 0.3s, color 0.3s; }
+        body.original-gradient-bg { background: linear-gradient(-45deg, #0f0c29, #302b63, #24243e, #1a1a2e); background-size: 400% 400%; animation: gradient-animation 15s ease infinite; }
+        .main-card { background: var(--tg-theme-secondary-bg-color); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 20px; border: 1px solid rgba(255, 255, 255, 0.1); }
+        .modal-card { background-color: var(--tg-theme-secondary-bg-color); border-radius: 20px; }
+        .tab-button.active { background-color: var(--tg-theme-button-color); color: var(--tg-theme-button-text-color); }
+        .tab-button { color: var(--tg-theme-hint-color); }
+        .gender-button.selected { border-color: var(--tg-theme-button-color); background-color: rgba(59, 130, 246, 0.2); box-shadow: 0 0 10px rgba(59, 130, 246, 0.5); }
+        .input-glow, .input-glow:focus { background-color: var(--tg-theme-input-bg-color); color: var(--tg-theme-text-color); }
+        .input-glow:focus { box-shadow: 0 0 15px rgba(59, 130, 246, 0.6); border-color: var(--tg-theme-button-color); }
+        label, h1, h2, h3 { color: var(--tg-theme-text-color); }
+        .gender-button, .text-white { color: var(--tg-theme-text-color); }
+        #clear-history-btn { background-color: #ef4444; }
+        @keyframes toast-in { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toast-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
+        .toast { animation: toast-in 0.5s forwards; } .toast.closing { animation: toast-out 0.5s forwards; }
+        @keyframes card-pop-in { from { transform: translateY(20px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+        .modal-card .animated-card { animation: card-pop-in 0.5s cubic-bezier(0.25, 1, 0.5, 1) forwards; opacity: 0; }
+        #modal-backdrop { transition: opacity 0.3s ease-in-out; }
+        #modal-content { transition: opacity 0.3s ease-in-out, transform 0.3s ease-in-out; max-height: 90vh; overflow-y: auto;}
+        .tg-hidden { display: none !important; }
+        #unlock-screen { animation: card-pop-in 0.5s forwards; }
+        #unlock-report-btn { background: linear-gradient(45deg, #22c55e, #16a34a); transition: all 0.3s ease; }
+        #unlock-report-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
+    </style>
+</head>
+<body class="original-gradient-bg">
+    <!-- HTML Structure is unchanged -->
+    <div class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="main-card w-full max-w-md p-6 sm:p-8">
+            <h1 class="text-3xl font-bold text-center mb-6"><i class="fas fa-tachometer-alt-fast mr-2"></i> পার্সোনালাইজড হেলথ ড্যাশবোর্ড</h1>
+            <div id="tab-controls" class="flex bg-indigo-900/40 rounded-lg p-1 mb-6">
+                <button id="calculator-tab-btn" class="tab-button w-1/2 p-2 rounded-lg font-semibold transition-colors active">ক্যালকুলেটর</button>
+                <button id="history-tab-btn" class="tab-button w-1/2 p-2 rounded-lg font-semibold transition-colors">হিস্টোরি</button>
+            </div>
+            <div id="calculator-tab">
+                <form id="healthForm" autocomplete="off" class="space-y-4">
+                    <div><label class="block text-lg font-medium mb-2">আপনার লিঙ্গ</label><div class="flex gap-4"><button type="button" data-gender="male" class="gender-button w-1/2 p-3 flex items-center justify-center gap-2 border-2 border-gray-600 rounded-lg transition"><i class="fas fa-mars"></i> পুরুষ</button><button type="button" data-gender="female" class="gender-button w-1/2 p-3 flex items-center justify-center gap-2 border-2 border-gray-600 rounded-lg transition"><i class="fas fa-venus"></i> মহিলা</button></div></div>
+                    <div><label for="age" class="block text-lg font-medium mb-2">আপনার বয়স</label><input type="number" id="age" placeholder="যেমন: 25" class="input-glow w-full p-3 pl-4 rounded-lg border-2 border-transparent focus:outline-none transition"></div>
+                    <div><label for="weight" class="block text-lg font-medium mb-2">আপনার ওজন (কেজি)</label><div class="relative"><span class="absolute inset-y-0 left-0 flex items-center pl-4"><i class="fas fa-weight-hanging text-gray-300"></i></span><input type="number" id="weight" step="any" placeholder="যেমন: 68" class="input-glow w-full p-3 pl-12 rounded-lg border-2 border-transparent focus:outline-none transition" required></div></div>
+                    <div><label class="block text-lg font-medium mb-2">আপনার উচ্চতা (ফিট, ইঞ্চি)</label><div class="flex gap-4"><input type="number" id="heightFeet" placeholder="ফিট" class="input-glow w-1/2 p-3 pl-4 rounded-lg border-2 border-transparent focus:outline-none transition" required><input type="number" id="heightInches" placeholder="ইঞ্চি" class="input-glow w-1/2 p-3 pl-4 rounded-lg border-2 border-transparent focus:outline-none transition"></div></div>
+                    <div><label for="goal" class="block text-lg font-medium mb-2">আপনার লক্ষ্য</label><select id="goal" class="input-glow w-full p-3 rounded-lg border-2 border-transparent focus:outline-none"><option value="lose">ওজন কমানো</option><option value="maintain" selected>ওজন ধরে রাখা</option><option value="gain">ওজন বাড়ানো</option></select></div>
+                    <div><label for="diet-style" class="block text-lg font-medium mb-2">ডায়েট স্টাইল</label><select id="diet-style" class="input-glow w-full p-3 rounded-lg border-2 border-transparent focus:outline-none"><option value="balanced">ব্যালেন্সড</option><option value="low-carb">লো-কার্ব</option><option value="high-protein">হাই-প্রোটিন</option></select></div>
+                    <div id="submit-button-container" class="pt-4 flex gap-4"><button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center transform hover:scale-105 duration-300">হেলথ রিপোর্ট দেখুন <i class="fas fa-file-medical-alt ml-2"></i></button></div>
+                </form>
+            </div>
+            <div id="unlock-screen" class="hidden text-center p-8">
+                <i class="fas fa-lock text-6xl text-yellow-400 mb-4"></i>
+                <h2 class="text-2xl font-bold text-white mb-2">রিপোর্টটি লক করা আছে</h2>
+                <p class="text-gray-300 mb-6">আপনার পার্সোনালাইজড হেলথ রিপোর্টটি দেখতে, অনুগ্রহ করে একটি সংক্ষিপ্ত বিজ্ঞাপন দেখুন।</p>
+                <button id="unlock-report-btn" class="w-full text-white font-bold py-3 px-4 rounded-lg flex items-center justify-center"><i class="fas fa-play mr-2"></i> বিজ্ঞাপন দেখে আনলক করুন</button>
+            </div>
+            <div id="history-tab" class="hidden"><div class="mb-4"><canvas id="bmiChart"></canvas></div><div id="history-log" class="space-y-2 max-h-80 overflow-y-auto"></div><button id="clear-history-btn" class="mt-4 w-full bg-red-800 text-white font-semibold py-2 rounded-lg hover:bg-red-700 transition-colors">হিস্টোরি মুছুন</button></div>
+        </div>
+    </div>
+    <div id="modal-backdrop" class="fixed inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm z-50 opacity-0 pointer-events-none"><div id="modal-content" class="modal-card w-full max-w-lg m-4 p-8 opacity-0 scale-95"></div></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50"></div>
+
+    <script>
+        // --- Variable Declarations ---
+        const tg = window.Telegram.WebApp;
+        const calculatorTabBtn = document.getElementById('calculator-tab-btn'), historyTabBtn = document.getElementById('history-tab-btn'), tabControls = document.getElementById('tab-controls'), calculatorTab = document.getElementById('calculator-tab'), historyTab = document.getElementById('history-tab'), healthForm = document.getElementById('healthForm'), genderButtons = document.querySelectorAll('.gender-button'), ageInput = document.getElementById('age'), weightInput = document.getElementById('weight'), heightFeetInput = document.getElementById('heightFeet'), heightInchesInput = document.getElementById('heightInches'), goalSelect = document.getElementById('goal'), dietStyleSelect = document.getElementById('diet-style'), submitBtnContainer = document.getElementById('submit-button-container'), modalBackdrop = document.getElementById('modal-backdrop'), modalContent = document.getElementById('modal-content'), historyLog = document.getElementById('history-log'), clearHistoryBtn = document.getElementById('clear-history-btn'), chartCanvas = document.getElementById('bmiChart'), unlockScreen = document.getElementById('unlock-screen'), unlockReportBtn = document.getElementById('unlock-report-btn');
+        let bmiChartInstance = null, selectedGender = null, calculationData = null;
+
+        // --- Event Listeners ---
+        calculatorTabBtn.addEventListener('click', () => { switchTab('calculator'); try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {} });
+        historyTabBtn.addEventListener('click', () => { switchTab('history'); try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {} });
+        healthForm.addEventListener('submit', handleCalculation);
+        clearHistoryBtn.addEventListener('click', clearHistory);
+        genderButtons.forEach(button => button.addEventListener('click', () => { selectedGender = button.dataset.gender; genderButtons.forEach(btn => btn.classList.remove('selected')); button.classList.add('selected'); try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {} validateFormForTelegram(); }));
+        [ageInput, weightInput, heightFeetInput, heightInchesInput].forEach(input => input.addEventListener('input', validateFormForTelegram));
+        modalBackdrop.addEventListener('click', e => { if (e.target === modalBackdrop) closeModal(); });
+        document.addEventListener('keydown', e => { if(e.key === "Escape" && !modalBackdrop.classList.contains('pointer-events-none')) closeModal(); });
+        unlockReportBtn.addEventListener('click', showRewardedPopupAd);
+
+        // --- Core Logic ---
+        function handleCalculation(event) {
+            event.preventDefault();
+            if (!selectedGender) { showToast("অনুগ্রহ করে আপনার লিঙ্গ নির্বাচন করুন।", "error"); try { tg.HapticFeedback.notificationOccurred('error'); } catch (e) {} return; }
+            const age = parseInt(ageInput.value), weightKg = parseFloat(weightInput.value), feet = parseFloat(heightFeetInput.value) || 0, inches = parseFloat(heightInchesInput.value) || 0;
+            if (isNaN(age) || age < 18 || isNaN(weightKg) || (isNaN(feet) && isNaN(inches)) || weightKg <= 0 || (feet <= 0 && inches <= 0)) { showToast("অনুগ্রহ করে সঠিক তথ্য দিন।", "error"); try { tg.HapticFeedback.notificationOccurred('error'); } catch (e) {} return; }
+            calculationData = { age, weightKg, feet, inches, goal: goalSelect.value, dietStyle: dietStyleSelect.value };
+            calculatorTab.classList.add('hidden');
+            tabControls.classList.add('hidden');
+            unlockScreen.classList.remove('hidden');
+            if(tg.initData) try { tg.MainButton.hide(); } catch(e) {}
+        }
+
+        function processAndShowResults(data) {
+            const { age, weightKg, feet, inches, goal, dietStyle } = data;
+            const totalInches = (feet * 12) + inches, heightInMeters = totalInches * 0.0254, heightCm = heightInMeters * 100;
+            const bmi = weightKg / (heightInMeters * heightInMeters);
+            const bmr = (10 * weightKg) + (6.25 * heightCm) - (5 * age) + (selectedGender === 'male' ? 5 : -161);
+            const maintenanceCalories = bmr * 1.375;
+            let targetCalories = maintenanceCalories;
+            if (goal === 'lose') targetCalories -= 500; else if (goal === 'gain') targetCalories += 500;
+            const macroRatios = { balanced: { protein: 0.30, carbs: 0.40, fat: 0.30 }, 'low-carb': { protein: 0.40, carbs: 0.20, fat: 0.40 }, 'high-protein': { protein: 0.50, carbs: 0.30, fat: 0.20 } };
+            const macros = { protein: (targetCalories * macroRatios[dietStyle].protein) / 4, carbs: (targetCalories * macroRatios[dietStyle].carbs) / 4, fat: (targetCalories * macroRatios[dietStyle].fat) / 9 };
+            const waterIntake = (weightKg * 35) / 1000;
+            
+            saveHistory({ date: new Date().toLocaleDateString('bn-BD'), bmi: bmi.toFixed(2), weight: weightKg });
+            populateAndShowModal({ bmi, macros, waterIntake }, heightInMeters);
+        }
+        
+        // --- FINAL CORRECTED populateAndShowModal FUNCTION ---
+        function populateAndShowModal(data, heightInMeters) {
+            const { bmi, macros, waterIntake } = data;
+            const minHealthyWeightKg = 18.5 * (heightInMeters * heightInMeters), maxHealthyWeightKg = 24.9 * (heightInMeters * heightInMeters);
+            const idealWeightRange = `${minHealthyWeightKg.toFixed(1)} - ${maxHealthyWeightKg.toFixed(1)} কেজি`;
+            let bmiStatusText, bmiStatusColor;
+            if(bmi < 18.5) { bmiStatusText = "কম ওজন"; bmiStatusColor = "text-yellow-400"; }
+            else if(bmi < 25) { bmiStatusText = "স্বাভাবিক ওজন"; bmiStatusColor = "text-green-400"; }
+            else { bmiStatusText = "অতিরিক্ত ওজন"; bmiStatusColor = "text-red-400"; }
+            
+            const reportText = `আমার স্বাস্থ্য রিপোর্ট:\n\n📊 BMI: ${bmi.toFixed(2)} (${bmiStatusText})\n⚖️ আদর্শ ওজন: ${idealWeightRange}\n\n🎯 দৈনিক ম্যাক্রো গোল:\n- প্রোটিন: ${macros.protein.toFixed(0)} গ্রাম\n- কার্বস: ${macros.carbs.toFixed(0)} গ্রাম\n- ফ্যাট: ${macros.fat.toFixed(0)} গ্রাম\n\n💧 দৈনিক পানির চাহিদা: ${waterIntake.toFixed(1)} লিটার`;
+
+            modalContent.innerHTML = `
+                <div class="flex justify-between items-center text-white"><h2 class="text-2xl font-bold">আপনার হেলথ ড্যাশবোর্ড</h2><button id="share-btn" class="text-blue-400 hover:text-blue-300 p-2 rounded-full"><i class="fas fa-share-alt"></i></button></div>
+                <div class="grid grid-cols-2 gap-4 my-4 text-white">
+                    <div class="bg-black/20 p-4 rounded-lg animated-card" style="animation-delay: 0.1s;"><div class="text-sm text-gray-400">আপনার BMI</div><div class="text-3xl font-bold ${bmiStatusColor}">${bmi.toFixed(2)}</div><div class="text-sm font-semibold ${bmiStatusColor}">${bmiStatusText}</div></div>
+                    <div class="bg-black/20 p-4 rounded-lg animated-card" style="animation-delay: 0.2s;"><div class="text-sm text-gray-400">আদর্শ ওজন</div><div class="text-3xl font-bold text-green-400">${idealWeightRange}</div><div class="text-sm text-gray-400">আপনার উচ্চতা অনুযায়ী</div></div>
+                </div>
+                <div class="p-5 bg-black/20 rounded-lg mb-4 animated-card text-white" style="animation-delay: 0.3s;">
+                    <h3 class="font-semibold text-gray-300 mb-3 text-lg">দৈনিক পুষ্টির লক্ষ্যমাত্রা</h3>
+                    <div class="grid grid-cols-3 gap-3 text-center">
+                        <div><div class="text-sm text-blue-400">প্রোটিন</div><div class="font-bold text-2xl">${macros.protein.toFixed(0)}<span class="text-sm text-gray-300"> গ্রাম</span></div></div>
+                        <div><div class="text-sm text-orange-400">কার্বস</div><div class="font-bold text-2xl">${macros.carbs.toFixed(0)}<span class="text-sm text-gray-300"> গ্রাম</span></div></div>
+                        <div><div class="text-sm text-yellow-400">ফ্যাট</div><div class="font-bold text-2xl">${macros.fat.toFixed(0)}<span class="text-sm text-gray-300"> গ্রাম</span></div></div>
+                    </div>
+                </div>
+                <div class="p-5 bg-black/20 rounded-lg animated-card" style="animation-delay: 0.4s;">
+                     <h3 class="font-semibold text-gray-300 mb-2 text-lg">কী-ইনসাইট ও পরামর্শ</h3>
+                     <ul class="list-disc list-inside space-y-2 text-gray-300">
+                        <li>আপনার দৈনিক <strong class="text-white">${waterIntake.toFixed(1)} লিটার</strong> পানি পান করার লক্ষ্য রাখা উচিত।</li>
+                        <li>${bmi < 18.5 ? 'আপনার ওজন কম হওয়ায়, পেশি গঠনে সাহায্য করতে আপনার প্রোটিনের লক্ষ্যমাত্রায় মনোযোগ দিন।' : (bmi > 25 ? 'ওজন নিয়ন্ত্রণে আনতে কার্বোহাইড্রেট গ্রহণের পরিমাণ কমানোর কথা ভাবতে পারেন।' : 'আপনার ওজন স্বাস্থ্যকর, এটি ধরে রাখতে এই পুষ্টির লক্ষ্যমাত্রা অনুসরণ করুন।')}</li>
+                        <li>যেকোনো ডায়েট প্ল্যান শুরু করার আগে একজন ডাক্তার বা পুষ্টিবিদের সাথে পরামর্শ করা অত্যন্ত জরুরি।</li>
+                    </ul>
+                </div>
+                <div class="p-4 bg-black/20 rounded-lg mt-4 animated-card text-center" style="animation-delay: 0.5s;">
+                    <button id="pro-tip-btn" class="text-green-400 font-semibold hover:text-green-300 transition-colors"><i class="fas fa-star mr-2"></i>একটি প্রো টিপস আনলক করতে বিজ্ঞাপন দেখুন</button>
+                </div>
+                <button id="close-modal-btn" class="mt-6 w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition-colors">বন্ধ করুন</button>`;
+
+            document.getElementById('close-modal-btn').addEventListener('click', tg.initData ? tg.close : closeModal); 
+            document.getElementById('share-btn').addEventListener('click', () => shareReport(reportText));
+            document.getElementById('pro-tip-btn').addEventListener('click', showRewardedInterstitialAd);
+            openModal();
+        }
+
+        // --- Ad Integration Functions ---
+        function showRewardedPopupAd() {
+            unlockReportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> লোড হচ্ছে...';
+            unlockReportBtn.disabled = true;
+            show_9530643('pop').then(() => {
+                showToast("ধন্যবাদ! রিপোর্ট আনলক করা হয়েছে।");
+                unlockScreen.classList.add('hidden');
+                processAndShowResults(calculationData);
+            }).catch(e => {
+                showToast("বিজ্ঞাপন লোড হয়নি। আপনাকে রিপোর্টটি দেখানো হচ্ছে।", "error");
+                unlockScreen.classList.add('hidden');
+                processAndShowResults(calculationData);
+            }).finally(() => {
+                unlockReportBtn.innerHTML = '<i class="fas fa-play mr-2"></i> বিজ্ঞাপন দেখে আনলক করুন';
+                unlockReportBtn.disabled = false;
+            });
+        }
+
+        function showRewardedInterstitialAd() {
+            show_9530643().then(() => {
+                alert('প্রো টিপস: প্রতিদিন অন্তত ৩০ মিনিট ব্যায়াম করুন। এটি শুধু ওজন নিয়ন্ত্রণেই নয়, মানসিক স্বাস্থ্যের জন্যও উপকারী!');
+            }).catch(e => {
+                showToast("দুঃখিত, এই মুহূর্তে বিজ্ঞাপনটি দেখানো যাচ্ছে না।", "error");
+            });
+        }
+
+        // --- Utility Functions ---
+        function showToast(message, type = 'success') { const toastContainer = document.getElementById('toast-container'); const toast = document.createElement('div'); const colors = { success: 'bg-green-500', error: 'bg-red-500' }; toast.className = `toast text-white px-4 py-3 rounded-lg shadow-lg ${colors[type]}`; toast.textContent = message; toastContainer.appendChild(toast); setTimeout(() => { toast.classList.add('closing'); toast.addEventListener('animationend', () => toast.remove()); }, 3000); }
+        function switchTab(tabName) {
+            unlockScreen.classList.add('hidden');
+            tabControls.classList.remove('hidden');
+            calculatorTab.classList.remove('hidden');
+            const isCalculator = tabName === 'calculator';
+            calculatorTab.style.display = isCalculator ? 'block' : 'none';
+            historyTab.style.display = isCalculator ? 'none' : 'block';
+            calculatorTabBtn.classList.toggle('active', isCalculator);
+            historyTabBtn.classList.toggle('active', !isCalculator);
+            if (tg.initData) { try { if (isCalculator) { tg.MainButton.show(); validateFormForTelegram(); } else { tg.MainButton.hide(); } } catch(e) {} }
+            if (!isCalculator) renderHistory();
+        }
+        function saveHistory(entry) { let history = JSON.parse(localStorage.getItem('bmiHistory')) || []; history.push(entry); localStorage.setItem('bmiHistory', JSON.stringify(history)); showToast("হিস্টোরি সেভ হয়েছে!"); }
+        
+        // --- FINAL CORRECTED renderHistory FUNCTION ---
+        function renderHistory() {
+            const history = JSON.parse(localStorage.getItem('bmiHistory')) || [];
+            historyLog.innerHTML = history.length === 0 ? `<p class="text-gray-400 text-center">কোনো হিস্টোরি পাওয়া যায়নি।</p>` : '';
+            clearHistoryBtn.style.display = history.length > 0 ? 'block' : 'none';
+            if (history.length > 0) {
+                historyLog.innerHTML = ''; // Clear previous entries
+                history.slice().reverse().forEach((entry, index) => {
+                    const logItem = document.createElement('div');
+                    logItem.className = 'flex justify-between items-center bg-indigo-900/50 p-3 rounded-lg text-sm text-white';
+                    logItem.innerHTML = `<div><span class="font-semibold">${entry.date}</span> | BMI: <span class="font-bold">${entry.bmi}</span> | ওজন: ${entry.weight} কেজি</div><button data-index="${history.length - 1 - index}" class="delete-btn text-red-500 hover:text-red-400"><i class="fas fa-trash"></i></button>`;
+                    historyLog.appendChild(logItem);
+                });
+                document.querySelectorAll('.delete-btn').forEach(btn => btn.addEventListener('click', deleteHistoryItem));
+            }
+            renderChart(history);
+        }
+        function renderChart(history) { if (bmiChartInstance) bmiChartInstance.destroy(); if(history.length < 2) { chartCanvas.style.display='none'; return; } chartCanvas.style.display='block'; const labels = history.map(entry => entry.date), data = history.map(entry => entry.bmi); const chartTextColor = (window.Telegram.WebApp.themeParams && window.Telegram.WebApp.themeParams.text_color) || '#9ca3af'; bmiChartInstance = new Chart(chartCanvas.getContext('2d'), { type: 'line', data: { labels, datasets: [{ label: 'BMI Trend', data, borderColor: 'rgba(59, 130, 246, 1)', backgroundColor: 'rgba(59, 130, 246, 0.2)', borderWidth: 2, tension: 0.4, fill: true }] }, options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: false, ticks: { color: chartTextColor } }, x: { ticks: { color: chartTextColor } } } } }); }
+        function deleteHistoryItem(e) { const index = e.currentTarget.dataset.index; let history = JSON.parse(localStorage.getItem('bmiHistory')) || []; history.splice(index, 1); localStorage.setItem('bmiHistory', JSON.stringify(history)); renderHistory(); showToast("হিস্টোরি ডিলিট হয়েছে", "error"); }
+        function clearHistory() { if(confirm("আপনি কি সমস্ত হিস্টোরি মুছে ফেলতে নিশ্চিত?")) { localStorage.removeItem('bmiHistory'); renderHistory(); showToast("সমস্ত হিস্টোরি মুছে ফেলা হয়েছে", "error"); } }
+        async function shareReport(text) { try { tg.HapticFeedback.impactOccurred('light'); } catch (e) {} if (tg.initData && tg.isVersionAtLeast('6.7')) { try { tg.switchInlineQuery(text, ['users', 'bots', 'groups', 'channels']); } catch (e) { showToast('Share failed.', 'error'); } } else if (navigator.share) { try { await navigator.share({ title: 'আমার হেলথ রিপোর্ট', text: text }); } catch (err) { console.error('Share failed:', err); } } else { navigator.clipboard.writeText(text).then(() => { showToast('রিপোর্ট কপি হয়েছে!'); }); } }
+        function openModal() { modalBackdrop.classList.remove('pointer-events-none', 'opacity-0'); modalContent.classList.remove('opacity-0', 'scale-95'); }
+        function closeModal() { modalBackdrop.classList.add('opacity-0'); modalContent.classList.add('opacity-0', 'scale-95'); setTimeout(() => { modalBackdrop.classList.add('pointer-events-none'); }, 300); }
+        function applyTelegramTheme(themeParams) { const root = document.documentElement; root.style.setProperty('--tg-theme-bg-color', themeParams.bg_color || '#0f0c29'); root.style.setProperty('--tg-theme-text-color', themeParams.text_color || '#ffffff'); root.style.setProperty('--tg-theme-hint-color', themeParams.hint_color || '#9ca3af'); root.style.setProperty('--tg-theme-button-color', themeParams.button_color || '#3b82f6'); root.style.setProperty('--tg-theme-button-text-color', themeParams.button_text_color || '#ffffff'); root.style.setProperty('--tg-theme-secondary-bg-color', themeParams.secondary_bg_color || 'rgba(26, 26, 46, 0.6)'); if (tg.colorScheme === 'light') { document.body.classList.remove('original-gradient-bg'); root.style.setProperty('--tg-theme-input-bg-color', '#e5e7eb'); } else { document.body.classList.add('original-gradient-bg'); root.style.setProperty('--tg-theme-input-bg-color', 'rgba(71, 85, 105, 0.4)'); } }
+        function validateFormForTelegram() { if (!tg.initData) return; try { const age = ageInput.value, weight = weightInput.value, feet = heightFeetInput.value; if (selectedGender && age && weight && feet) { tg.MainButton.enable(); } else { tg.MainButton.disable(); } } catch (e) {} }
+
+        // --- Telegram & App Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                if (window.Telegram && window.Telegram.WebApp.initData) {
+                    tg.ready();
+                    tg.expand();
+                    applyTelegramTheme(tg.themeParams);
+                    tg.onEvent('themeChanged', () => applyTelegramTheme(tg.themeParams));
+                    tg.MainButton.setText('হেলথ রিপোর্ট দেখুন');
+                    tg.MainButton.onClick(handleCalculation);
+                    tg.MainButton.show();
+                    submitBtnContainer.classList.add('tg-hidden');
+                    validateFormForTelegram();
+                    if (typeof show_9530643 === 'function') {
+                        show_9530643({ type: 'inApp', inAppSettings: { frequency: 2, capping: 0.1, interval: 30, timeout: 5, everyPage: false } });
+                    }
+                }
+            } catch(e) {
+                console.error("Telegram Web App features failed to initialize. Running in standard browser mode.", e);
+            }
+        });
+    </script>
+</body>
+</html>
